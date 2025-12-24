@@ -13,18 +13,24 @@ const app = express();
 // ✅ PORT vindo do ambiente (Render) ou fallback local
 const PORT = process.env.PORT || 3333;
 
-// Middlewares
+// ✅ CORS COMPLETO (resolve o erro)
 app.use(
   cors({
-    origin: "*", // depois podemos restringir
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// 🔥 RESPONDE O PREFLIGHT
+app.options("*", cors());
+
 app.use(express.json());
 
 // Banco de dados
 connectDB();
 
-// Health check (ótimo para deploy)
+// Health check
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "ok",
