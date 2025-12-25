@@ -78,10 +78,10 @@ const Navbar = () => {
         {user && (
           <div className="dropdown dropdown-end lg:hidden">
             <button
-              className="btn btn-ghost btn-circle"
+              className="p-2 bg-blue-500 text-white rounded"
               onClick={() => setOpen((prev) => !prev)}
             >
-              ☰
+              MENU
             </button>
 
             <ul
