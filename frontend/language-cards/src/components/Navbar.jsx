@@ -11,9 +11,7 @@ const Navbar = () => {
   const { user, signOut } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
 
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
+  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
 
   const handleLogout = () => {
     signOut();
@@ -76,16 +74,16 @@ const Navbar = () => {
 
         {/* MOBILE MENU */}
         {user && (
-          <div className="dropdown dropdown-end lg:hidden">
+          <div className="relative lg:hidden">
             <button
-              className="p-2 bg-blue-500 text-white rounded"
+              className="btn btn-ghost btn-circle z-[999] relative"
               onClick={() => setOpen((prev) => !prev)}
             >
-              MENU
+              ☰
             </button>
 
             <ul
-              className={`menu menu-sm dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52 z-[999] ${
+              className={`menu menu-sm dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52 z-[999] pointer-events-auto absolute right-0 ${
                 open ? "block" : "hidden"
               }`}
             >
