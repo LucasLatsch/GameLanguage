@@ -3,7 +3,7 @@ import ThemeSelector from "../components/ThemeSelector";
 
 const Settings = () => {
   return (
-    <div className="min-h-screen pt-24 px-4">
+    <div className="min-h-[100dvh]pt-24 px-4">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}

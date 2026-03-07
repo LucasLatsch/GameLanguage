@@ -11,7 +11,7 @@ const History = () => {
   }, []);
 
   return (
-    <div className="min-h-screen p-6 pt-20 bg-base-200">
+    <div className="min-h-[100dvh] p-6 pt-20 bg-base-200">
       <h1 className="text-2xl font-bold mb-6 text-center">📊 Meu histórico</h1>
 
       <div className="max-w-xl mx-auto space-y-3">

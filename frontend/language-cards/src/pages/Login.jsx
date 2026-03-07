@@ -19,7 +19,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 pt-16">
+    <div className="min-h-[100dvh] grid grid-cols-1 lg:grid-cols-2 pt-16">
       {/* LEFT / BRANDING */}
       <motion.div
         initial={{ opacity: 0, x: -40 }}

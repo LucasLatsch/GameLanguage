@@ -25,11 +25,15 @@ const Home = () => {
   };
 
   const handleRemoveWord = async (id) => {
+    const confirmDelete = window.confirm(
+      "Tem certeza que deseja remover esta palavra?"
+    );
+    if (!confirmDelete) return;
     await removeWord(id); // sem mexer com token aqui
   };
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 md:p-12 flex flex-col items-center bg-base-200">
+    <div className="min-h-[100dvh] p-4 sm:p-6 md:p-12 flex flex-col items-center bg-base-200">
       {/* Form de adicionar palavras */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
