@@ -8,20 +8,29 @@ router.use(authMiddleware);
 
 // criar palavra
 router.post("/", async (req, res) => {
-  const { term, translation } = req.body;
+  const { term, translation, categoryId, listId } = req.body;
 
-  const word = await Word.create({
-    userId: req.userId,
-    term,
-    translation,
-  });
+  try {
+    const word = await Word.create({
+      userId: req.userId,
+      term,
+      translation,
+      categoryId,
+      listId: listId || null,
+    });
 
-  res.json(word);
+    res.status(201).json(word);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 });
 
 // listar palavras do usuário
 router.get("/", async (req, res) => {
-  const words = await Word.find({ userId: req.userId });
+  const words = await Word.find({ userId: req.userId })
+    .populate("categoryId", "name")
+    .populate("listId", "name");
+
   res.json(words);
 });
 

@@ -5,6 +5,8 @@ import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import wordRoutes from "./routes/words.routes.js";
 import scoreRoutes from "./routes/score.routes.js";
+import categoryRoutes from "./routes/category.routes.js";
+import listRoutes from "./routes/lists.routes.js";
 
 dotenv.config();
 
@@ -42,6 +44,8 @@ app.get("/health", (req, res) => {
 app.use("/auth", authRoutes);
 app.use("/words", wordRoutes);
 app.use("/scores", scoreRoutes);
+app.use("/categories", categoryRoutes);
+app.use("/lists", listRoutes);
 
 // Start server
 app.listen(PORT, () => {

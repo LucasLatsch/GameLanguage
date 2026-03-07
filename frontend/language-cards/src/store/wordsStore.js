@@ -4,32 +4,84 @@ import { useAuthStore } from "./authStore";
 
 export const useWordsStore = create((set, get) => ({
   words: [],
+  lists: [],
+  categories: [],
   loading: false,
 
-  fetchWords: async () => {
+  setAuthHeader: () => {
+    const token = useAuthStore.getState().token;
+
+    if (token) {
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+    } else {
+      delete api.defaults.headers.common.Authorization;
+    }
+  },
+
+  // buscar palavras
+  fetchWords: async (listId = null) => {
     try {
       set({ loading: true });
-      const token = useAuthStore.getState().token;
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      get().setAuthHeader();
 
-      const { data } = await api.get("/words");
-      set({ words: data, loading: false });
+      const url = listId ? `/words?listId=${listId}` : "/words";
+
+      const { data } = await api.get(url);
+
+      set({
+        words: data,
+        loading: false,
+      });
     } catch (error) {
       console.error("Erro ao buscar palavras:", error);
       set({ loading: false });
     }
   },
 
-  addWord: async (term, translation) => {
+  // buscar listas
+  fetchLists: async () => {
+    try {
+      get().setAuthHeader();
+
+      const { data } = await api.get("/lists");
+
+      set({
+        lists: data,
+      });
+    } catch (error) {
+      console.error("Erro ao buscar listas:", error);
+    }
+  },
+
+  // buscar categorias
+  fetchCategories: async () => {
+    try {
+      const { data } = await api.get("/categories");
+
+      set({
+        categories: data,
+      });
+    } catch (error) {
+      console.error("Erro ao buscar categorias:", error);
+    }
+  },
+
+  // criar palavra
+  addWord: async (term, translation, categoryId, listId = null) => {
     try {
       set({ loading: true });
-      const token = useAuthStore.getState().token;
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      get().setAuthHeader();
 
-      const { data } = await api.post("/words", { term, translation });
+      const { data } = await api.post("/words", {
+        term,
+        translation,
+        categoryId,
+        listId,
+      });
+
       set((state) => ({
-        words: [...(state.words || []), data],
-        loading: false, // <-- zera o loading aqui
+        words: [...state.words, data],
+        loading: false,
       }));
     } catch (error) {
       console.error("Erro ao adicionar palavra:", error);
@@ -37,20 +89,20 @@ export const useWordsStore = create((set, get) => ({
     }
   },
 
+  // remover palavra
   removeWord: async (id) => {
     try {
       set({ loading: true });
-      const token = useAuthStore.getState().token;
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      get().setAuthHeader();
 
       await api.delete(`/words/${id}`);
+
       set((state) => ({
         words: state.words.filter((w) => w._id !== id),
-        loading: false, // <-- zera o loading aqui também
+        loading: false,
       }));
     } catch (error) {
       console.error("Erro ao remover palavra:", error);
-      console.log("Erro ao remover palavra:", error);
       set({ loading: false });
     }
   },
