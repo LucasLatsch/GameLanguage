@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { useWordsStore } from "../store/wordsStore";
 import { useScoreStore } from "../store/scoreStore";
 import { initScore } from "../store/initScore";
+import { useCategoriesStore } from "../store/categoriesStore";
+import { useListsStore } from "../store/listsStore";
 
 const normalizeText = (text) =>
   text
@@ -33,34 +35,63 @@ const Game = () => {
   const { score, wrongAnswers, addScore, addWrong, saveScore } =
     useScoreStore();
 
+  const { categories, fetchCategories } = useCategoriesStore();
+  const { lists, fetchLists } = useListsStore();
+
   const [gameWords, setGameWords] = useState([]);
   const [wrongWords, setWrongWords] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const [answer, setAnswer] = useState("");
   const [timeLeft, setTimeLeft] = useState(10);
-  const [feedback, setFeedback] = useState(null); // null | "correct" | "wrong"
+  const [feedback, setFeedback] = useState(null);
   const [scoreSaved, setScoreSaved] = useState(false);
 
-  // buscar palavras
+  const [started, setStarted] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedList, setSelectedList] = useState("");
+
+  // buscar dados
   useEffect(() => {
     if (!words.length) fetchWords();
+    if (!categories.length) fetchCategories();
+    if (!lists.length) fetchLists();
   }, []);
 
-  // iniciar jogo
-  useEffect(() => {
-    if (words.length) {
-      setGameWords(shuffleArray(words));
-      resetGame();
-    }
-  }, [words]);
+  const resetGame = () => {
+    setCurrentIndex(0);
+    setWrongWords([]);
+    setAnswer("");
+    setTimeLeft(10);
+    setFeedback(null);
+    setScoreSaved(false);
+    initScore();
+  };
+
+  const startGame = () => {
+    const filtered = words.filter((word) => {
+      const categoryId = word.categoryId?._id || word.categoryId;
+      const listId = word.listId?._id || word.listId;
+
+      const matchCategory =
+        !selectedCategory || categoryId === selectedCategory;
+      const matchList = !selectedList || listId === selectedList;
+
+      return matchCategory && matchList;
+    });
+
+    const shuffled = shuffleArray(filtered);
+
+    setGameWords(shuffled);
+    setStarted(true);
+    resetGame();
+  };
 
   const currentWord = useMemo(
     () => gameWords[currentIndex],
     [gameWords, currentIndex]
   );
 
-  // timer (pausa durante feedback)
   useEffect(() => {
     if (!currentWord || feedback) return;
 
@@ -76,7 +107,6 @@ const Game = () => {
     return () => clearTimeout(timer);
   }, [timeLeft, currentWord, feedback]);
 
-  // salvar score ao finalizar
   useEffect(() => {
     if (
       !scoreSaved &&
@@ -88,14 +118,10 @@ const Game = () => {
     }
   }, [currentIndex]);
 
-  const resetGame = () => {
-    setCurrentIndex(0);
-    setWrongWords([]);
-    setAnswer("");
-    setTimeLeft(10);
-    setFeedback(null);
-    setScoreSaved(false);
-    initScore();
+  const cancelGame = () => {
+    setStarted(false);
+    setGameWords([]);
+    resetGame();
   };
 
   const nextWord = () => {
@@ -135,6 +161,7 @@ const Game = () => {
     }
   };
 
+  // loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -143,10 +170,55 @@ const Game = () => {
     );
   }
 
+  // tela inicial
+  if (!started) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center bg-base-200 p-4">
+        <div className="card p-6 bg-base-100 shadow-md w-full max-w-md">
+          <h2 className="text-xl font-bold mb-4">Iniciar jogo</h2>
+
+          <select
+            className="select select-bordered w-full mb-3"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="">Todas categorias</option>
+            {categories.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="select select-bordered w-full mb-3"
+            value={selectedList}
+            onChange={(e) => setSelectedList(e.target.value)}
+          >
+            <option value="">Todas listas</option>
+            {lists.map((l) => (
+              <option key={l._id} value={l._id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            className="btn btn-primary w-full"
+            onClick={startGame}
+            disabled={!words.length}
+          >
+            Iniciar jogo
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // fim do jogo
   if (gameWords.length > 0 && currentIndex >= gameWords.length) {
     return (
-      <div className="min-h-screen flex items-center justify-center pt-20">
+      <div className="min-h-screen flex items-center justify-center pt-20 p-4">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -164,19 +236,19 @@ const Game = () => {
           <button
             className="btn btn-primary w-full mt-4"
             onClick={() => {
-              setGameWords(shuffleArray(words));
-              resetGame();
+              setStarted(false);
             }}
           >
-            Jogar novamente 🔁
+            Voltar ao início
           </button>
         </motion.div>
       </div>
     );
   }
 
+  // jogo ativo
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center pt-20 bg-base-200">
+    <div className="min-h-[100dvh] flex items-center justify-center pt-20 bg-base-200 p-4">
       <motion.div
         variants={cardVariants}
         animate={feedback === "wrong" ? "wrong" : "idle"}
@@ -229,6 +301,9 @@ const Game = () => {
 
           <button disabled={feedback !== null} className="btn btn-primary">
             Confirmar
+          </button>
+          <button type="button" className="btn btn-error" onClick={cancelGame}>
+            Cancelar
           </button>
         </form>
       </motion.div>
