@@ -51,6 +51,8 @@ const Game = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedList, setSelectedList] = useState("");
 
+  const [wordsAmount, setWordsAmount] = useState(10);
+
   // buscar dados
   useEffect(() => {
     if (!words.length) fetchWords();
@@ -80,16 +82,23 @@ const Game = () => {
       return matchCategory && matchList;
     });
 
+    if (!filtered.length) return;
+
     const shuffled = shuffleArray(filtered);
 
-    setGameWords(shuffled);
+    const selectedWords = shuffled.slice(
+      0,
+      Math.min(wordsAmount, shuffled.length),
+    );
+
+    setGameWords(selectedWords);
     setStarted(true);
     resetGame();
   };
 
   const currentWord = useMemo(
     () => gameWords[currentIndex],
-    [gameWords, currentIndex]
+    [gameWords, currentIndex],
   );
 
   useEffect(() => {
@@ -203,6 +212,17 @@ const Game = () => {
             ))}
           </select>
 
+          <select
+            className="select select-bordered w-full mb-3"
+            value={wordsAmount}
+            onChange={(e) => setWordsAmount(Number(e.target.value))}
+          >
+            <option value={5}>5 palavras</option>
+            <option value={10}>10 palavras</option>
+            <option value={15}>15 palavras</option>
+            <option value={20}>20 palavras</option>
+          </select>
+
           <button
             className="btn btn-primary w-full"
             onClick={startGame}
@@ -257,8 +277,8 @@ const Game = () => {
             feedback === "correct"
               ? "bg-success text-success-content"
               : feedback === "wrong"
-              ? "bg-error text-error-content"
-              : "bg-base-100"
+                ? "bg-error text-error-content"
+                : "bg-base-100"
           }`}
       >
         <div className="flex justify-between text-sm mb-2 opacity-80">

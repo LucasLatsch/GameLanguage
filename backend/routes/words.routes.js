@@ -38,6 +38,26 @@ router.get("/", async (req, res) => {
   res.json(words);
 });
 
+// editar palavra
+router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+  const { term, translation, categoryId, listId } = req.body;
+
+  const word = await Word.findOneAndUpdate(
+    { _id: id, userId: req.userId }, // segurança: só edita do dono
+    { term, translation, categoryId, listId },
+    { new: true },
+  )
+    .populate("categoryId", "name")
+    .populate("listId", "name");
+
+  if (!word) {
+    return res.status(404).json({ message: "Palavra não encontrada" });
+  }
+
+  res.json(word);
+});
+
 // deletar palavra
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;

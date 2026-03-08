@@ -1,11 +1,11 @@
 import { create } from "zustand";
 import { api } from "../api/api";
-import { useAuthStore } from "./authStore";
 
-export const useWordsStore = create((set, get) => ({
+export const useWordsStore = create((set) => ({
   words: [],
-  lists: [],
   loading: false,
+
+  setLoading: (value) => set({ loading: value }),
 
   // criar palavra
   addWord: async (term, translation, categoryId, listId = null) => {
@@ -21,10 +21,10 @@ export const useWordsStore = create((set, get) => ({
 
       set((state) => ({
         words: [...state.words, data],
-        loading: false,
       }));
     } catch (error) {
       console.error("Erro ao adicionar palavra:", error);
+    } finally {
       set({ loading: false });
     }
   },
@@ -39,10 +39,27 @@ export const useWordsStore = create((set, get) => ({
 
       set({
         words: data,
-        loading: false,
       });
     } catch (error) {
       console.error("Erro ao buscar palavras:", error);
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  // editar palavra
+  updateWord: async (id, updatedData) => {
+    try {
+      set({ loading: true });
+
+      const { data } = await api.put(`/words/${id}`, updatedData);
+
+      set((state) => ({
+        words: state.words.map((word) => (word._id === id ? data : word)),
+      }));
+    } catch (error) {
+      console.error("Erro ao editar palavra:", error);
+    } finally {
       set({ loading: false });
     }
   },
@@ -55,11 +72,11 @@ export const useWordsStore = create((set, get) => ({
       await api.delete(`/words/${id}`);
 
       set((state) => ({
-        words: state.words.filter((w) => w._id !== id),
-        loading: false,
+        words: state.words.filter((word) => word._id !== id),
       }));
     } catch (error) {
       console.error("Erro ao remover palavra:", error);
+    } finally {
       set({ loading: false });
     }
   },
