@@ -8,27 +8,25 @@ router.use(authMiddleware);
 
 // criar lista
 router.post("/", async (req, res) => {
-  const { name } = req.body;
-  const userId = req.user._id;
-
   try {
-    const list = new List({ name, userId });
-    await list.save();
+    const { name } = req.body;
+
+    const list = await List.create({
+      name,
+      userId: req.userId,
+    });
+
     res.status(201).json(list);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-// listar listas do usuário
-router.get("/", async (req, res) => {
-  const userId = req.user._id;
-  try {
-    const lists = await List.find({ userId });
-    res.json(lists);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+});
+
+// listar listas
+router.get("/", async (req, res) => {
+  const lists = await List.find({ userId: req.userId });
+
+  res.json(lists);
 });
 
 // deletar lista

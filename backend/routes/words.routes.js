@@ -8,20 +8,24 @@ router.use(authMiddleware);
 
 // criar palavra
 router.post("/", async (req, res) => {
-  const { term, translation, categoryId, listId } = req.body;
-
   try {
+    const { term, translation, categoryId, listId } = req.body;
+
     const word = await Word.create({
-      userId: req.userId,
       term,
       translation,
       categoryId,
-      listId: listId || null,
+      listId,
+      userId: req.userId,
     });
 
-    res.status(201).json(word);
+    const populatedWord = await Word.findById(word._id)
+      .populate("categoryId", "name")
+      .populate("listId", "name");
+
+    res.status(201).json(populatedWord);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
 

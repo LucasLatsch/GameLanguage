@@ -1,16 +1,21 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWordsStore } from "../store/wordsStore";
+import { useCategoriesStore } from "../store/categoriesStore";
+import { useListsStore } from "../store/listsStore";
+import WordCard from "../components/WordCard";
+import CreateCategoryModal from "../components/CreateCategoryModal";
+import CreateListModal from "../components/CreateListModal";
 
 const Home = () => {
   const words = useWordsStore((state) => state.words);
-  const lists = useWordsStore((state) => state.lists);
-  const categories = useWordsStore((state) => state.categories);
+  const lists = useListsStore((state) => state.lists);
+  const categories = useCategoriesStore((state) => state.categories);
   const loading = useWordsStore((state) => state.loading);
 
   const fetchWords = useWordsStore((state) => state.fetchWords);
-  const fetchLists = useWordsStore((state) => state.fetchLists);
-  const fetchCategories = useWordsStore((state) => state.fetchCategories);
+  const fetchLists = useListsStore((state) => state.fetchLists);
+  const fetchCategories = useCategoriesStore((state) => state.fetchCategories);
 
   const addWord = useWordsStore((state) => state.addWord);
   const removeWord = useWordsStore((state) => state.removeWord);
@@ -20,9 +25,16 @@ const Home = () => {
   const [categoryId, setCategoryId] = useState("");
   const [listId, setListId] = useState("");
 
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [listModalOpen, setListModalOpen] = useState(false);
+
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterList, setFilterList] = useState("");
+  const [search, setSearch] = useState("");
+
   useEffect(() => {
     fetchWords();
-    // fetchLists();
+    fetchLists();
     fetchCategories();
   }, []);
 
@@ -48,6 +60,20 @@ const Home = () => {
 
     await removeWord(id);
   };
+
+  const filteredWords = words.filter((word) => {
+    const category = word.categoryId?._id || word.categoryId;
+    const list = word.listId?._id || word.listId;
+
+    const matchCategory = !filterCategory || category === filterCategory;
+    const matchList = !filterList || list === filterList;
+
+    const matchSearch =
+      word.term.toLowerCase().includes(search.toLowerCase()) ||
+      word.translation.toLowerCase().includes(search.toLowerCase());
+
+    return matchCategory && matchList && matchSearch;
+  });
 
   return (
     <div className="min-h-[100dvh] p-4 sm:p-6 md:p-12 flex flex-col items-center bg-base-200">
@@ -89,22 +115,38 @@ const Home = () => {
             <select
               className="select select-bordered"
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === "new") {
+                  setCategoryModalOpen(true);
+                  return;
+                }
+
+                setCategoryId(e.target.value);
+              }}
             >
               <option value="">Categoria</option>
 
-              {categories.map((cat) => (
+              {categories?.map((cat) => (
                 <option key={cat._id} value={cat._id}>
                   {cat.name}
                 </option>
               ))}
+
+              <option value="new">+ Nova categoria</option>
             </select>
 
             {/* Lista (opcional) */}
             <select
               className="select select-bordered"
               value={listId}
-              onChange={(e) => setListId(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === "new") {
+                  setListModalOpen(true);
+                  return;
+                }
+
+                setListId(e.target.value);
+              }}
             >
               <option value="">Sem lista</option>
 
@@ -113,6 +155,8 @@ const Home = () => {
                   {list.name}
                 </option>
               ))}
+
+              <option value="new">+ Nova lista</option>
             </select>
 
             <button
@@ -130,44 +174,74 @@ const Home = () => {
         </div>
       </motion.div>
 
+      {/* Filtros */}
+      <div className="w-full max-w-5xl mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Busca */}
+        <input
+          type="text"
+          placeholder="Buscar palavra..."
+          className="input input-bordered"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        {/* Filtro categoria */}
+        <select
+          className="select select-bordered"
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+        >
+          <option value="">Todas categorias</option>
+
+          {categories.map((cat) => (
+            <option key={cat._id} value={cat._id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+
+        {/* Filtro lista */}
+        <select
+          className="select select-bordered"
+          value={filterList}
+          onChange={(e) => setFilterList(e.target.value)}
+        >
+          <option value="">Todas listas</option>
+
+          {lists.map((list) => (
+            <option key={list._id} value={list._id}>
+              {list.name}
+            </option>
+          ))}
+        </select>
+        <button
+          className="btn btn-outline"
+          onClick={() => {
+            setSearch("");
+            setFilterCategory("");
+            setFilterList("");
+          }}
+        >
+          Limpar filtros
+        </button>
+      </div>
+
       {/* Lista de palavras */}
       <motion.div className="w-full max-w-5xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence>
-          {words.map((word) => (
-            <div
-              key={word._id}
-              className="card bg-base-100 shadow-md p-4 flex flex-col gap-2"
-            >
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">{word.term}</span>
-
-                <button
-                  onClick={() => handleRemoveWord(word._id)}
-                  className="btn btn-error btn-xs"
-                >
-                  X
-                </button>
-              </div>
-
-              <span className="text-base-content/70">{word.translation}</span>
-
-              {/* Categoria */}
-              {word.categoryId && (
-                <span className="badge badge-primary badge-sm w-fit">
-                  {word.categoryId.name}
-                </span>
-              )}
-
-              {/* Lista */}
-              {word.listId && (
-                <span className="badge badge-outline badge-sm w-fit">
-                  {word.listId.name}
-                </span>
-              )}
-            </div>
+          {filteredWords?.map((word) => (
+            <WordCard key={word._id} word={word} onDelete={handleRemoveWord} />
           ))}
         </AnimatePresence>
       </motion.div>
+      <CreateCategoryModal
+        open={categoryModalOpen}
+        onClose={() => setCategoryModalOpen(false)}
+      />
+      <CreateListModal
+        open={listModalOpen}
+        onClose={() => setListModalOpen(false)}
+      />
     </div>
   );
 };
