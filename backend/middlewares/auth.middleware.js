@@ -4,7 +4,7 @@ import { jwtSecret } from "../config/auth.js";
 export const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Token não fornecido" });
   }
 
@@ -12,9 +12,9 @@ export const authMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, jwtSecret);
-    req.userId = decoded.userId;
+    req.userId = decoded.userId; // ✅ aqui colocamos o userId
     next();
-  } catch {
-    res.status(401).json({ message: "Token inválido" });
+  } catch (err) {
+    return res.status(401).json({ message: "Token inválido" });
   }
 };

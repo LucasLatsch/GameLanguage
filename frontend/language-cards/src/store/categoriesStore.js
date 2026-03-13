@@ -1,15 +1,15 @@
+// src/store/categoriesStore.js
 import { create } from "zustand";
 import { api } from "../api/api";
-import { useAuthStore } from "./authStore";
 
-export const useCategoriesStore = create((set, get) => ({
+export const useCategoriesStore = create((set) => ({
   categories: [],
   loading: false,
 
-  // criar categoria
   addCategory: async (name) => {
     try {
       set({ loading: true });
+
       const { data } = await api.post("/categories", { name });
 
       set((state) => ({
@@ -22,11 +22,12 @@ export const useCategoriesStore = create((set, get) => ({
     }
   },
 
-  // buscar categorias
+  // src/store/categoriesStore.js
   fetchCategories: async () => {
     try {
       set({ loading: true });
       const { data } = await api.get("/categories");
+      console.log("CATEGORIAS RECEBIDAS DO BACKEND:", data); // 👈 log para debug
 
       set({
         categories: data,
@@ -37,12 +38,30 @@ export const useCategoriesStore = create((set, get) => ({
       set({ loading: false });
     }
   },
+  updateCategory: async (id, name) => {
+    try {
+      set({ loading: true });
 
-  // deletar categoria
+      const { data } = await api.put(`/categories/${id}`, { name });
+
+      set((state) => ({
+        categories: state.categories.map((cat) =>
+          cat._id === id ? data : cat,
+        ),
+        loading: false,
+      }));
+    } catch (error) {
+      console.error("Erro ao atualizar categoria:", error);
+      set({ loading: false });
+    }
+  },
+
   removeCategory: async (id) => {
     try {
       set({ loading: true });
+
       await api.delete(`/categories/${id}`);
+
       set((state) => ({
         categories: state.categories.filter((cat) => cat._id !== id),
         loading: false,

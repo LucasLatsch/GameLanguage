@@ -1,271 +1,248 @@
-import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+// src/pages/Home.jsx
+import { useEffect, useState } from "react";
 import { useWordsStore } from "../store/wordsStore";
 import { useCategoriesStore } from "../store/categoriesStore";
 import { useListsStore } from "../store/listsStore";
-import WordCard from "../components/WordCard";
-import CreateCategoryModal from "../components/CreateCategoryModal";
-import CreateListModal from "../components/CreateListModal";
-import EditWordModal from "../components/EditWordModal";
+import { useAuthStore } from "../store/authStore";
+
+import { useWordsManager } from "../hooks/useWordsManager";
+import { useFilters } from "../hooks/useFilters";
+import { useViewMode } from "../hooks/useViewMode";
+
+import ViewSelector from "../components/ui/ViewSelector";
+import FilterBar from "../components/FilterBar";
+import WordsView from "../components/views/WordsView";
+import CategoriesView from "../components/views/CategoriesView";
+import ListsView from "../components/views/ListsView";
+
+import EditWordModal from "../components/modal/EditWordModal";
+import EditListModal from "../components/modal/EditListModal";
+import EditCategoryModal from "../components/modal/EditCategoryModal";
+import ConfirmModal from "../components/modal/ConfirmModal";
 
 const Home = () => {
-  const { words, loading, addWord, removeWord, updateWord, fetchWords } =
-    useWordsStore();
+  const { token } = useAuthStore();
+  const { words, fetchWords, removeWord, updateWord } = useWordsStore();
+  const {
+    categories,
+    fetchCategories,
+    addCategory,
+    updateCategory,
+    removeCategory,
+  } = useCategoriesStore();
+  const { lists, fetchLists, createList, updateList, deleteList } =
+    useListsStore();
 
-  const { lists, fetchLists } = useListsStore();
-  const { categories, fetchCategories } = useCategoriesStore();
+  const {
+    selectedWord,
+    setSelectedWord,
+    editModalOpen,
+    setEditModalOpen,
+    handleOpenEditModal,
+  } = useWordsManager();
 
-  const [term, setTerm] = useState("");
-  const [translation, setTranslation] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [listId, setListId] = useState("");
+  const {
+    search,
+    setSearch,
+    filterCategory,
+    setFilterCategory,
+    filterList,
+    setFilterList,
+    clearFilters,
+    filteredWords,
+  } = useFilters(words);
 
+  const { viewMode, setViewMode } = useViewMode();
+
+  // Modais de criação/edição
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [listModalOpen, setListModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedWord, setSelectedWord] = useState(null);
 
-  const [filterCategory, setFilterCategory] = useState("");
-  const [filterList, setFilterList] = useState("");
-  const [search, setSearch] = useState("");
+  const [editList, setEditList] = useState(null);
+  const [editCategory, setEditCategory] = useState(null);
 
-  useEffect(() => {
-    fetchWords();
-    fetchLists();
-    fetchCategories();
-  }, [fetchWords, fetchLists, fetchCategories]);
+  // Modal de confirmação
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteType, setDeleteType] = useState(""); // 'word' | 'list' | 'category'
 
-  const handleOpenEditModal = (word) => {
-    setSelectedWord({ ...word });
-    setEditModalOpen(true);
+  // Abrir modal de delete
+  const handleDeleteItem = (item, type) => {
+    if (!item) return;
+    setItemToDelete(item);
+    setDeleteType(type);
+    setDeleteModalOpen(true);
   };
 
-  const handleAddWord = async (e) => {
-    e.preventDefault();
+  // Confirmar exclusão
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
 
-    if (!term.trim() || !translation.trim()) return;
+    setDeleteLoading(true);
 
-    await addWord(term, translation, categoryId, listId || null);
+    try {
+      if (deleteType === "word") {
+        await removeWord(itemToDelete._id);
+      } else if (deleteType === "list") {
+        await deleteList(itemToDelete._id);
+      } else if (deleteType === "category") {
+        await removeCategory(itemToDelete._id);
+      }
+    } catch (err) {
+      console.error("Erro ao deletar:", err);
+    }
 
-    setTerm("");
-    setTranslation("");
-    setCategoryId("");
-    setListId("");
+    setDeleteLoading(false);
+    setDeleteModalOpen(false);
+    setItemToDelete(null);
+    setDeleteType("");
   };
 
-  const handleRemoveWord = async (id) => {
-    const confirmDelete = window.confirm(
-      "Tem certeza que deseja remover esta palavra?",
-    );
+  // Abrir modal de edição
+  const handleEditList = (list) => setEditList(list);
+  const handleEditCategory = (category) => setEditCategory(category);
 
-    if (!confirmDelete) return;
+  // Criar novo item
+  const handleAddAction = () => {
+    if (viewMode === "words") {
+      setSelectedWord(null);
+      setEditModalOpen(true);
+      return;
+    }
 
-    await removeWord(id);
+    if (viewMode === "lists") {
+      setEditList(null);
+      setListModalOpen(true);
+      return;
+    }
+
+    if (viewMode === "categories") {
+      setEditCategory(null);
+      setCategoryModalOpen(true);
+    }
   };
 
-  const handleUpdateWord = async (id, updatedData) => {
-    await updateWord(id, updatedData);
-
+  const handleCloseWordModal = () => {
     setEditModalOpen(false);
     setSelectedWord(null);
   };
 
-  const clearFilters = () => {
-    setSearch("");
-    setFilterCategory("");
-    setFilterList("");
+  const handleCloseListModal = () => {
+    setListModalOpen(false);
+    setEditList(null);
   };
 
-  const filteredWords = useMemo(() => {
-    return words.filter((word) => {
-      const category = word.categoryId?._id || word.categoryId;
-      const list = word.listId?._id || word.listId;
+  const handleCloseCategoryModal = () => {
+    setCategoryModalOpen(false);
+    setEditCategory(null);
+  };
 
-      const matchCategory = !filterCategory || category === filterCategory;
-      const matchList = !filterList || list === filterList;
+  useEffect(() => {
+    if (!token) return;
 
-      const matchSearch =
-        word.term.toLowerCase().includes(search.toLowerCase()) ||
-        word.translation.toLowerCase().includes(search.toLowerCase());
-
-      return matchCategory && matchList && matchSearch;
-    });
-  }, [words, filterCategory, filterList, search]);
+    fetchWords();
+    fetchLists();
+    fetchCategories();
+  }, [token, fetchWords, fetchLists, fetchCategories]);
 
   return (
-    <div className="min-h-[100dvh] p-4 sm:p-6 md:p-12 flex flex-col items-center bg-base-200">
-      {/* Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full mb-8 pt-20"
-      >
-        <div className="card bg-base-100 shadow-lg p-6 rounded-xl">
-          <h2 className="text-2xl font-bold mb-4 text-center">
-            Gerencie suas palavras
-          </h2>
+    <div className="min-h-[100dvh] p-6 pt-24 bg-base-200">
+      <h1 className="text-3xl font-bold mb-6 text-center">
+        Gerencie suas palavras
+      </h1>
 
-          <form
-            onSubmit={handleAddWord}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
-          >
-            <input
-              type="text"
-              placeholder="Palavra"
-              className="input input-bordered"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              required
-            />
+      <div className="md:flex justify-between items-center mb-6">
+        <ViewSelector viewMode={viewMode} setViewMode={setViewMode} />
 
-            <input
-              type="text"
-              placeholder="Tradução"
-              className="input input-bordered"
-              value={translation}
-              onChange={(e) => setTranslation(e.target.value)}
-              required
-            />
-
-            {/* Categoria */}
-            <select
-              className="select select-bordered"
-              value={categoryId}
-              onChange={(e) => {
-                if (e.target.value === "new") {
-                  setCategoryModalOpen(true);
-                  return;
-                }
-
-                setCategoryId(e.target.value);
-              }}
-            >
-              <option value="">Categoria</option>
-
-              {categories?.map((cat) => (
-                <option key={cat._id} value={cat._id}>
-                  {cat.name}
-                </option>
-              ))}
-
-              <option value="new">+ Nova categoria</option>
-            </select>
-
-            {/* Lista */}
-            <select
-              className="select select-bordered"
-              value={listId}
-              onChange={(e) => {
-                if (e.target.value === "new") {
-                  setListModalOpen(true);
-                  return;
-                }
-
-                setListId(e.target.value);
-              }}
-            >
-              <option value="">Sem lista</option>
-
-              {lists?.map((list) => (
-                <option key={list._id} value={list._id}>
-                  {list.name}
-                </option>
-              ))}
-
-              <option value="new">+ Nova lista</option>
-            </select>
-
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              {loading ? (
-                <span className="loading loading-spinner loading-sm" />
-              ) : (
-                "Adicionar"
-              )}
-            </button>
-          </form>
-        </div>
-      </motion.div>
-
-      {/* Filtros */}
-      <div className="w-full max-w-5xl mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <input
-          type="text"
-          placeholder="Buscar palavra..."
-          className="input input-bordered"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <select
-          className="select select-bordered"
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
+        <button
+          className="btn btn-primary mt-2 md:mt-0"
+          onClick={handleAddAction}
         >
-          <option value="">Todas categorias</option>
-
-          {categories.map((cat) => (
-            <option key={cat._id} value={cat._id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="select select-bordered"
-          value={filterList}
-          onChange={(e) => setFilterList(e.target.value)}
-        >
-          <option value="">Todas listas</option>
-
-          {lists.map((list) => (
-            <option key={list._id} value={list._id}>
-              {list.name}
-            </option>
-          ))}
-        </select>
-
-        <button className="btn btn-outline" onClick={clearFilters}>
-          Limpar filtros
+          {viewMode === "words" && "Nova Palavra"}
+          {viewMode === "lists" && "Nova Lista"}
+          {viewMode === "categories" && "Nova Categoria"}
         </button>
       </div>
 
-      {/* Lista de palavras */}
-      <motion.div className="w-full max-w-5xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AnimatePresence>
-          {filteredWords.map((word) => (
-            <WordCard
-              key={word._id}
-              word={word}
-              onDelete={handleRemoveWord}
-              onEdit={handleOpenEditModal}
-            />
-          ))}
-        </AnimatePresence>
-      </motion.div>
+      {/* Barra de filtros */}
+      {viewMode === "words" && (
+        <FilterBar
+          search={search}
+          setSearch={setSearch}
+          filterCategory={filterCategory}
+          setFilterCategory={setFilterCategory}
+          filterList={filterList}
+          setFilterList={setFilterList}
+          categories={categories}
+          lists={lists}
+          onClear={clearFilters}
+        />
+      )}
 
-      {/* Modais */}
-      <CreateCategoryModal
-        open={categoryModalOpen}
-        onClose={() => setCategoryModalOpen(false)}
-      />
+      {/* Views */}
+      {viewMode === "words" && (
+        <WordsView
+          words={filteredWords}
+          onEdit={handleOpenEditModal}
+          onDelete={(word) => handleDeleteItem(word, "word")}
+        />
+      )}
 
-      <CreateListModal
-        open={listModalOpen}
-        onClose={() => setListModalOpen(false)}
-      />
+      {viewMode === "lists" && (
+        <ListsView
+          lists={lists}
+          onEdit={handleEditList}
+          onDelete={(list) => handleDeleteItem(list, "list")}
+          categories={categories}
+        />
+      )}
 
+      {viewMode === "categories" && (
+        <CategoriesView
+          categories={categories}
+          onEdit={handleEditCategory}
+          onDelete={(cat) => handleDeleteItem(cat, "category")}
+        />
+      )}
+
+      {/* MODAIS */}
       <EditWordModal
         open={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        word={selectedWord}
-        onUpdate={handleUpdateWord}
+        onClose={handleCloseWordModal}
+        word={selectedWord || null}
+        onUpdate={updateWord}
         categories={categories}
         lists={lists}
+      />
+
+      <EditListModal
+        open={listModalOpen || !!editList}
+        onClose={handleCloseListModal}
+        list={editList}
+      />
+
+      <EditCategoryModal
+        open={categoryModalOpen || !!editCategory}
+        onClose={handleCloseCategoryModal}
+        category={editCategory}
+      />
+
+      <ConfirmModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title={`Deletar ${
+          deleteType === "word"
+            ? "Palavra"
+            : deleteType === "list"
+              ? "Lista"
+              : "Categoria"
+        }`}
+        message={`Tem certeza que deseja deletar "${
+          itemToDelete?.term || itemToDelete?.name || "este item"
+        }"?`}
+        loading={deleteLoading}
       />
     </div>
   );

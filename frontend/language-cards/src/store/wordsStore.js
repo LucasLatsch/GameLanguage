@@ -1,3 +1,4 @@
+// src/store/wordsStore.js
 import { create } from "zustand";
 import { api } from "../api/api";
 
@@ -19,9 +20,7 @@ export const useWordsStore = create((set) => ({
         listId,
       });
 
-      set((state) => ({
-        words: [...state.words, data],
-      }));
+      set((state) => ({ words: [data, ...state.words] }));
     } catch (error) {
       console.error("Erro ao adicionar palavra:", error);
     } finally {
@@ -37,9 +36,7 @@ export const useWordsStore = create((set) => ({
       const url = listId ? `/words?listId=${listId}` : "/words";
       const { data } = await api.get(url);
 
-      set({
-        words: data,
-      });
+      set({ words: data });
     } catch (error) {
       console.error("Erro ao buscar palavras:", error);
     } finally {
