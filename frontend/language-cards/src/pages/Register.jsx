@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useAuthStore } from "../store/authStore";
+import { useNavigate } from "react-router-dom"; // ⚡ importar useNavigate
 
 const Register = () => {
   const signUp = useAuthStore((state) => state.signUp);
   const loading = useAuthStore((state) => state.loading);
+  const navigate = useNavigate(); // ⚡ inicializar navigate
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -12,7 +14,17 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await signUp(nome, email, password);
+
+    try {
+      const success = await signUp(nome, email, password);
+
+      if (success) {
+        // ⚡ redirecionar para a página principal após criar conta
+        navigate("/home"); // ajuste a rota conforme sua aplicação
+      }
+    } catch (err) {
+      console.error("Erro ao registrar:", err);
+    }
   };
 
   return (
